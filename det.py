@@ -13,16 +13,7 @@ from utils.general import check_img_size, check_requirements, check_imshow, non_
     scale_coords, xyxy2xywh, strip_optimizer, set_logging, increment_path
 from utils.plots import plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized, TracedModel
-import base64
-import numpy as np
-from pycocotools import _mask as coco_mask
-import typing as t
-import zlib
-import pandas as pd
 
-class Namespace:
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
 
 def detect(save_img=False):
     source, weights, view_img, save_txt, imgsz, trace = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size, not opt.no_trace
@@ -51,10 +42,10 @@ def detect(save_img=False):
         model.half()  # to FP16
 
     # Second-stage classifier
-    # classify = False
-    # if classify:
-    #     modelc = load_classifier(name='resnet101', n=2)  # initialize
-    #     modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
+    classify = False
+    if classify:
+        modelc = load_classifier(name='resnet101', n=2)  # initialize
+        modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
 
     # Set Dataloader
     vid_path, vid_writer = None, None
@@ -102,8 +93,8 @@ def detect(save_img=False):
         t3 = time_synchronized()
 
         # Apply Classifier
-        # if classify:
-        #     pred = apply_classifier(pred, modelc, img, im0s)
+        if classify:
+            pred = apply_classifier(pred, modelc, img, im0s)
 
         # Process detections
         for i, det in enumerate(pred):  # detections per image
@@ -171,117 +162,35 @@ def detect(save_img=False):
 
     print(f'Done. ({time.time() - t0:.3f}s)')
 
-def encode_binary_mask(mask: np.ndarray) -> t.Text:
-  """Converts a binary mask into OID challenge encoding ascii text."""
-
-  # check input mask --
-  if mask.dtype != bool:
-    raise ValueError(
-        "encode_binary_mask expects a binary mask, received dtype == %s" %
-        mask.dtype)
-
-  mask = np.squeeze(mask)
-  if len(mask.shape) != 2:
-    raise ValueError(
-        "encode_binary_mask expects a 2d mask, received shape == %s" %
-        mask.shape)
-
-  # convert input mask to expected COCO API input --
-  mask_to_encode = mask.reshape(mask.shape[0], mask.shape[1], 1)
-  mask_to_encode = mask_to_encode.astype(np.uint8)
-  mask_to_encode = np.asfortranarray(mask_to_encode)
-
-  # RLE encode mask --
-  encoded_mask = coco_mask.encode(mask_to_encode)[0]["counts"]
-
-  # compress and base64 encoding --
-  binary_str = zlib.compress(encoded_mask, zlib.Z_BEST_COMPRESSION)
-  base64_str = base64.b64encode(binary_str)
-  return base64_str
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--weights', nargs='+', type=str, default='yolov7.pt', help='model.pt path(s)')
-    # parser.add_argument('--source', type=str, default='inference/images', help='source')  # file/folder, 0 for webcam
-    # parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
-    # parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
-    # parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
-    # parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    # parser.add_argument('--view-img', action='store_true', help='display results')
-    # parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
-    # parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
-    # parser.add_argument('--nosave', action='store_true', help='do not save images/videos')
-    # parser.add_argument('--classes', nargs='+', type=int, help='filter by class: --class 0, or --class 0 2 3')
-    # parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
-    # parser.add_argument('--augment', action='store_true', help='augmented inference')
-    # parser.add_argument('--update', action='store_true', help='update all models')
-    # parser.add_argument('--project', default='runs/detect', help='save results to project/name')
-    # parser.add_argument('--name', default='exp', help='save results to project/name')
-    # parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
-    # parser.add_argument('--no-trace', action='store_true', help='don`t trace model')
-    # args = ["--weights", "./runs/train/yolov7-e6e8/weights/best.pt", "--source", "../datasets/hubmap/images/test/00d75ad65de3.tif", "--img-size", "512",
-    #         "--conf-thres", "0.25", "--iou-thres", "0.45", "--device", "", "--view-img",
-    #         "--save-txt", "--save-conf", "--nosave", "--classes", "0", "--agnostic-nms",
-    #         "--augment",  "--project", "runs/detect", "--name", "exp",
-    #         "--exist-ok", "--no-trace"]
-    # opt = parser.parse_args()
-    opt = Namespace(
-        weights='./runs/train/yolov7-e6e8/weights/best.pt',
-        source='../datasets/hubmap/images/test/',
-        img_size=512,
-        conf_thres=0.25,
-        iou_thres=0.45,
-        device='',
-        view_img=False,
-        save_txt=True,
-        save_conf=True,
-        nosave=False,
-        classes=None,
-        agnostic_nms=False,
-        augment=False,
-        update=False,
-        project='runs/detect',
-        name='exp',
-        exist_ok=False,
-        no_trace=False
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--weights', nargs='+', type=str, default='yolov7.pt', help='model.pt path(s)')
+    parser.add_argument('--source', type=str, default='inference/images', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
+    parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
+    parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
+    parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--view-img', action='store_true', help='display results')
+    parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
+    parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
+    parser.add_argument('--nosave', action='store_true', help='do not save images/videos')
+    parser.add_argument('--classes', nargs='+', type=int, help='filter by class: --class 0, or --class 0 2 3')
+    parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
+    parser.add_argument('--augment', action='store_true', help='augmented inference')
+    parser.add_argument('--update', action='store_true', help='update all models')
+    parser.add_argument('--project', default='runs/detect', help='save results to project/name')
+    parser.add_argument('--name', default='exp', help='save results to project/name')
+    parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
+    parser.add_argument('--no-trace', action='store_true', help='don`t trace model')
+    opt = parser.parse_args()
     print(opt)
     #check_requirements(exclude=('pycocotools', 'thop'))
 
     with torch.no_grad():
         if opt.update:  # update all models (to fix SourceChangeWarning)
-            for opt.weights in [opt.weights]:
+            for opt.weights in ['yolov7.pt']:
                 detect()
                 strip_optimizer(opt.weights)
         else:
             detect()
-
-    # 读取folder文件夹下的所有文件
-    folder = 'runs\detect\exp10\labels'
-    files = Path(folder).rglob('*.txt')
-
-    data = []
-    for file in files:
-        id = file.stem
-        with open(file, 'r') as f:
-            lines = f.readlines()
-            prediction_strings = []
-            for line in lines:
-                class_id, x_center, y_center, width, height, confidence = line.strip().split()
-                # 创建mask矩阵
-                mask = np.zeros((512, 512), dtype=np.uint8)
-                x_center, y_center, width, height = [float(x) for x in [x_center, y_center, width, height]]
-                top_left_x = int((x_center - width / 2) * 512)
-                top_left_y = int((y_center - height / 2) * 512)
-                bottom_right_x = int((x_center + width / 2) * 512)
-                bottom_right_y = int((y_center + height / 2) * 512)
-                mask[top_left_y:bottom_right_y, top_left_x:bottom_right_x] = 1
-                # 转换mask
-                encoded_mask = encode_binary_mask(np.asarray(mask, order="F").astype(bool))
-                prediction_strings.append(f"0 {confidence} {encoded_mask.decode('utf-8')}")
-            prediction_string = " ".join(prediction_strings)
-            data.append([id, 512, 512, prediction_string])
-
-    df = pd.DataFrame(data, columns=['id', 'height', 'width', 'prediction_string'])
-    df.to_csv('output.csv', index=False)
-

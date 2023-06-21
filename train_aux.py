@@ -7,6 +7,7 @@ import time
 from copy import deepcopy
 from pathlib import Path
 from threading import Thread
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 import numpy as np
 import torch.distributed as dist

@@ -1400,8 +1400,11 @@ class ComputeLossAuxOTA:
                 matching_matrix[cost_argmin, anchor_matching_gt > 1] = 1.0
             fg_mask_inboxes = matching_matrix.sum(0) > 0.0
             matched_gt_inds = matching_matrix[:, fg_mask_inboxes].argmax(0)
-        
-            from_which_layer = from_which_layer[fg_mask_inboxes]
+
+            device = from_which_layer.device  # get the device of the tensor
+            fg_mask_inboxes = fg_mask_inboxes.to(device)  # move the indices to the same device
+            from_which_layer = from_which_layer[fg_mask_inboxes]  # now this should work
+
             all_b = all_b[fg_mask_inboxes]
             all_a = all_a[fg_mask_inboxes]
             all_gj = all_gj[fg_mask_inboxes]
@@ -1553,8 +1556,11 @@ class ComputeLossAuxOTA:
                 matching_matrix[cost_argmin, anchor_matching_gt > 1] = 1.0
             fg_mask_inboxes = matching_matrix.sum(0) > 0.0
             matched_gt_inds = matching_matrix[:, fg_mask_inboxes].argmax(0)
-        
-            from_which_layer = from_which_layer[fg_mask_inboxes]
+
+            device = from_which_layer.device  # get the device of the tensor
+            fg_mask_inboxes = fg_mask_inboxes.to(device)  # move the indices to the same device
+            from_which_layer = from_which_layer[fg_mask_inboxes]  # now this should work
+
             all_b = all_b[fg_mask_inboxes]
             all_a = all_a[fg_mask_inboxes]
             all_gj = all_gj[fg_mask_inboxes]
